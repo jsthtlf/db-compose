@@ -1,0 +1,85 @@
+version: '3.6'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql-db
+    restart: always
+    command: mysqld --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-StrongRootPassword}
+      MYSQL_USER: ${DB_USER:-user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-StrongPassword}
+      MYSQL_DATABASE: ${DB_DATABASE:-nahida}
+    ports:
+      - ${MYSQL_PORT}:3306
+
+  mariadb:
+    image: mariadb
+    container_name: maria-db
+    restart: always
+    command: --plugin-load-add=auth_ed25519
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-StrongRootPassword}
+      MYSQL_USER: ${DB_USER:-user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-StrongPassword}
+      MYSQL_DATABASE: ${DB_DATABASE:-nahida}
+    ports:
+      - ${MARIADB_PORT}:3306
+
+  postgres:
+    build:
+      context: .
+      dockerfile: postgres/Dockerfile
+    container_name: psql-db
+    restart: always
+    command: 
+      -c ssl=on 
+      -c ssl_cert_file=/var/lib/postgresql/server.crt
+      -c ssl_key_file=/var/lib/postgresql/server.key
+    environment:
+      PGADMIN_DEFAULT_PASSWORD: ${DB_ROOT_PASSWORD:-StrongRootPassword}
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-StrongPassword}
+      POSTGRES_DB: ${DB_DATABASE:-nahida}
+      PGDATA: /data/postgres
+    ports:
+      - ${PSQL_PORT}:5432
+
+  redis:
+    image: redis/redis-stack:6.2.6-v7
+    container_name: redis-db
+    restart: always
+    environment:
+      REDIS_ARGS: "--requirepass password --user ${DB_USER:-user} on >${DB_PASSWORD:-StrongPassword} ~* allcommands --user default on >StrongRootPassword ~* allcommands"
+      REDIS_PORT: 6379
+      REDIS_TLS_ENABLED: "yes"
+      REDIS_TLS_CERT_FILE: /usr/local/etc/redis/redis.crt
+      REDIS_TLS_KEY_FILE: /usr/local/etc/redis/redis.key
+      REDIS_TLS_CA_FILE: /usr/local/etc/redis/ca.crt
+    ports:
+    - ${REDIS_PORT}:6379
+
+  mongodb:
+    image: mongo:7.0.3
+    container_name: mongo-db
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USER:-user}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:-StrongPassword}
+      MONGO_INITDB_DATABASE: ${DB_DATABASE:-nahida}
+    ports:
+    - ${MONGODB_PORT}:27017
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8.7.24-alpine
+    container_name: clickhouse-db
+    restart: always
+    environment:
+      CLICKHOUSE_USER: ${DB_USER:-user}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+      CLICKHOUSE_PASSWORD: ${DB_PASSWORD:-StrongPassword}
+      CLICKHOUSE_DB: ${DB_DATABASE:-nahida}
+    ports:
+    - ${CLICKHOUSE_HTTP}:8123
+    - ${CLICKHOUSE_TCP}:9000
